@@ -1,0 +1,36 @@
+# ===== SETTINGS =====
+$InputFile  = "C:\Temp\YourInputFile.csv"   # Path to your exported Excel/CSV
+$OutputFile = "C:\Temp\AutopilotReady.csv"  # Output file
+$DefaultGroupTag = "FinanceDept"            # Group Tag to apply to all devices
+
+# ===== MAPPING SECTION =====
+# Change these to match your actual input file's header names
+$SerialCol       = "Serial No"
+$ProductIDCol    = "Win Product Id"
+$HashCol         = "Hash"
+# If your file has its own Group Tag or Assigned User columns, put their names here:
+$GroupTagCol     = ""           # Leave blank if not present
+$AssignedUserCol = ""           # Leave blank if not present
+
+# ===== SCRIPT =====
+Write-Host "Reading $InputFile ..." -ForegroundColor Cyan
+
+$data = Import-Csv $InputFile
+
+$csvOutput = $data | Select-Object `
+    @{Name='Device Serial Number'; Expression = { $_.$SerialCol }},
+    @{Name='Windows Product ID';    Expression = { $_.$ProductIDCol }},
+    @{Name='Hardware Hash';         Expression = { $_.$HashCol }},
+    @{Name='Group Tag';              Expression = { 
+        if ($GroupTagCol -and $_.$GroupTagCol) { $_.$GroupTagCol }
+        else { $DefaultGroupTag }
+    }},
+    @{Name='Assigned User';         Expression = { 
+        if ($AssignedUserCol -and $_.$AssignedUserCol) { $_.$AssignedUserCol }
+        else { "" }
+    }}
+
+$csvOutput | Export-Csv $OutputFile -NoTypeInformation -Encoding UTF8
+
+Write-Host "✅ Done! Autopilot-ready CSV saved to $OutputFile" -ForegroundColor Green
+Write-Host "   Group Tag applied: $DefaultGroupTag" -ForegroundColor Yellow
