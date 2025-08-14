@@ -1,0 +1,13 @@
+$maxWait = 900
+$interval = 30
+$elapsed = 0
+
+do {
+    $user = (Get-WmiObject -Class Win32_ComputerSystem).UserName
+    if ($user -and $user -notmatch "defaultuser0") { break }
+    Write-Output "Waiting for real user login..."
+    Start-Sleep -Seconds $interval
+    $elapsed += $interval
+} while ($elapsed -lt $maxWait)
+
+Write-Output "User detected: $user"
