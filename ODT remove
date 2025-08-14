@@ -1,9 +1,0 @@
-# ==============================
-# Step 5 - Cleanup ODT files
-# ==============================
-if (Test-Path $ODTExe) {
-    Remove-Item -Path $ODTExe -Force -ErrorAction SilentlyContinue
-}
-if (Test-Path $ODTFolder) {
-    Remove-Item -Path $ODTFolder -Recurse -Force -ErrorAction SilentlyContinue
-}
