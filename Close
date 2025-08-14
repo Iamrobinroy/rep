@@ -1,5 +1,0 @@
-# Close all running Office apps silently
-$officeProcesses = @("WINWORD","EXCEL","POWERPNT","OUTLOOK","ONENOTE")
-foreach ($proc in $officeProcesses) {
-    Get-Process -Name $proc -ErrorAction SilentlyContinue | Stop-Process -Force
-}
