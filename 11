@@ -1,0 +1,131 @@
+<# 
+.SYNOPSIS
+Removes Windows 11 built-in apps (bloatware) for all users, including Copilot.
+Excludes apps from Windows 10 that may not be present in Windows 11.
+
+.NOTES
+Run as Administrator for full effect.
+#>
+
+Write-Host "Starting Windows 11 bloatware removal..." -ForegroundColor Cyan
+
+# Log file path
+$LogFile = "C:\Windows\Temp\Win11BloatwareRemoval.log"
+
+function Write-Log {
+    param([string]$Message)
+    $Time = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    Add-Content -Path $LogFile -Value "$Time  $Message"
+}
+
+Write-Log "=== Bloatware removal started ==="
+
+# ===========================
+# Windows 11 Built-in Apps to Remove
+# ===========================
+$BloatwareApps = @(
+
+    # 3D Viewer
+    "Microsoft.Microsoft3DViewer"
+
+    # Office Hub
+    "Microsoft.MicrosoftOfficeHub"
+
+    # Solitaire Collection
+    "Microsoft.MicrosoftSolitaireCollection"
+
+    # Sticky Notes
+    "Microsoft.MicrosoftStickyNotes"
+
+    # Mixed Reality Portal
+    "Microsoft.MixedReality.Portal"
+
+    # Paint 3D
+    "Microsoft.MSPaint"
+
+    # OneNote UWP
+    "Microsoft.Office.OneNote"
+
+    # People app
+    "Microsoft.People"
+
+    # Print 3D
+    "Microsoft.Print3D"
+
+    # Skype
+    "Microsoft.SkypeApp"
+
+    # Microsoft To Do
+    "Microsoft.Todos"
+
+    # Wallet
+    "Microsoft.Wallet"
+
+    # Whiteboard
+    "Microsoft.Whiteboard"
+
+    # Alarms & Clock
+    "Microsoft.WindowsAlarms"
+
+    # Camera
+    "Microsoft.WindowsCamera"
+
+    # Maps app
+    "Microsoft.WindowsMaps"
+
+    # Voice Recorder
+    "Microsoft.WindowsSoundRecorder"
+
+    # Xbox App suite
+    "Microsoft.XboxApp"
+    "Microsoft.XboxGameOverlay"
+    "Microsoft.XboxGamingOverlay"
+    "Microsoft.XboxIdentityProvider"
+    "Microsoft.XboxSpeechToTextOverlay"
+    "Microsoft.Xbox.TCUI"
+
+    # Phone Link
+    "Microsoft.YourPhone"
+
+    # OneConnect
+    "Microsoft.OneConnect"
+
+    # New Outlook app (Preview)
+    "Microsoft.OutlookForWindows"
+
+    # New Copilot App
+    "Microsoft.WindowsCopilot"
+)
+
+# ===========================
+# REMOVE APPX PACKAGES
+# ===========================
+foreach ($app in $BloatwareApps) {
+    Write-Log "Processing: $app"
+
+    try {
+        # Remove for all existing users (logged-in only)
+        $AppPackages = Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue
+        if ($AppPackages) {
+            $AppPackages | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
+            Write-Log "Removed for all active users: $app"
+        } else {
+            Write-Log "Not found for active users: $app"
+        }
+
+        # Remove provisioned package (prevents future installs)
+        $ProvPackage = Get-AppxProvisionedPackage -Online | Where-Object DisplayName -EQ $app
+        if ($ProvPackage) {
+            Remove-AppxProvisionedPackage -Online -PackageName $ProvPackage.PackageName -ErrorAction SilentlyContinue | Out-Null
+            Write-Log "Removed provisioned package: $app"
+        } else {
+            Write-Log "No provisioned package found: $app"
+        }
+    }
+    catch {
+        Write-Log "Error removing: $app - $_"
+    }
+}
+
+Write-Log "=== Windows 11 bloatware removal completed ==="
+Write-Host "Bloatware removal completed." -ForegroundColor Green
