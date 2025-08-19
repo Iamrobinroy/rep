@@ -1,0 +1,33 @@
+# =============================
+# PowerShell script to run batch commands every 1 minute
+# =============================
+
+# --- Batch commands to run ---
+$batchContent = @"
+echo ==================================================
+echo Running batch commands from PowerShell
+echo Time: %DATE% %TIME%
+REM Add your actual batch commands below
+echo Hello from CMD!
+REM Example: ping localhost
+ping 127.0.0.1 -n 2
+echo ==================================================
+pause
+"@
+
+# Infinite loop
+while ($true) {
+
+    # Create temporary batch file
+    $tempBatch = "$env:TEMP\tempScript.bat"
+    $batchContent | Out-File -FilePath $tempBatch -Encoding ASCII
+
+    # Run batch file in CMD (visible window) and wait for it to finish
+    Start-Process "cmd.exe" -ArgumentList "/c `"$tempBatch`"" -Wait
+
+    # Delete the temporary batch file
+    Remove-Item $tempBatch -Force
+
+    # Wait 60 seconds before running again
+    Start-Sleep -Seconds 60
+}
