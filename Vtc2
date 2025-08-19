@@ -1,0 +1,122 @@
+@echo off
+setlocal enabledelayedexpansion
+
+REM ===========================
+REM Test network connectivity
+REM ===========================
+set "servers=\\myserver-01 \\myserver-02"
+for %%S in (%servers%) do (
+    ping -n 1 -w 2000 %%S >nul 2>&1
+    if errorlevel 1 (
+        echo ERROR: Cannot reach %%S
+        echo Please check network connectivity.
+        pause
+        exit /b 1
+    )
+)
+echo Network connectivity OK.
+
+REM ===========================
+REM Choose Upgrade Type
+REM ===========================
+echo.
+echo Select installation type:
+echo [1] In-Place Upgrade to Windows 11
+echo [2] New Device Setup (no OS install)
+set /p choice="Enter 1 or 2: "
+
+if "%choice%"=="1" goto inplace
+if "%choice%"=="2" goto newdevice
+
+echo Invalid choice.
+exit /b 1
+
+REM ===========================
+REM Common logging function
+REM ===========================
+:makelog
+set "HOSTNAME=%COMPUTERNAME%"
+set "USERNAME=%USERNAME%"
+
+REM ----- Build safe timestamp -----
+for /f "tokens=1-3 delims=/.- " %%a in ("%date%") do (
+    set "YYYY=%%c"
+    set "MM=%%a"
+    set "DD=%%b"
+)
+for /f "tokens=1-3 delims=:." %%a in ("%time%") do (
+    set "HH=%%a"
+    set "Min=%%b"
+    set "Sec=%%c"
+)
+if "%HH:~0,1%"==" " set "HH=0%HH:~1,1%"
+set "LOGDATE=%YYYY%%MM%%DD%_%HH%%Min%%Sec%"
+
+set "LOGFILE=%LOGFOLDER%\%HOSTNAME%_%USERNAME%_%LOGDATE%.txt"
+echo Log file will be created: %LOGFILE%
+
+REM ----- Write header -----
+echo ============================== >> "%LOGFILE%"
+echo Device: %HOSTNAME% >> "%LOGFILE%"
+echo User:   %USERNAME% >> "%LOGFILE%"
+echo Date:   %date% >> "%LOGFILE%"
+echo Time:   %time% >> "%LOGFILE%"
+echo ============================== >> "%LOGFILE%"
+
+REM ----- Mapped drives -----
+echo. >> "%LOGFILE%"
+echo --- Mapped Drives --- >> "%LOGFILE%"
+wmic logicaldisk where "drivetype=4" get deviceid,providername >> "%LOGFILE%"
+
+REM ----- Installed apps -----
+echo. >> "%LOGFILE%"
+echo --- Installed Applications (Win32) --- >> "%LOGFILE%"
+wmic product get name,version >> "%LOGFILE%"
+
+REM ----- Store apps -----
+echo. >> "%LOGFILE%"
+echo --- Microsoft Store Apps --- >> "%LOGFILE%"
+powershell -command "Get-AppxPackage | Select-Object Name, Version | Format-Table -AutoSize" >> "%LOGFILE%"
+
+echo. >> "%LOGFILE%"
+echo Log file created successfully.
+exit /b 0
+
+
+REM ===========================
+REM In-Place Upgrade
+REM ===========================
+:inplace
+set "LOGFOLDER=%~dp0Logs\InPlace"
+if not exist "%LOGFOLDER%" mkdir "%LOGFOLDER%"
+call :makelog
+
+echo.
+echo WARNING: You are about to wipe and upgrade this device to
+echo Windows 11 24H2 Enterprise LTSC.
+set /p confirm="Are you sure you want to continue? (Y/N): "
+if /i "%confirm%" NEQ "Y" (
+    echo Upgrade cancelled by user.
+    exit /b 0
+)
+
+echo Starting Windows 11 installation...
+REM =====================================
+REM >>> ADD YOUR WINDOWS 11 INSTALL SCRIPT BELOW <<<
+REM Example:
+REM setup.exe /auto upgrade /quiet /noreboot
+REM =====================================
+exit /b 0
+
+
+REM ===========================
+REM New Device Setup
+REM ===========================
+:newdevice
+set "LOGFOLDER=%~dp0Logs\NewDevice"
+if not exist "%LOGFOLDER%" mkdir "%LOGFOLDER%"
+call :makelog
+
+echo.
+echo Log file created. You may now continue setting up the new Surface 7 device.
+exit /b 0
