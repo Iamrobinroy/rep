@@ -1,0 +1,38 @@
+# =============================
+# PowerShell script to run batch commands every 1 minute for 10 times
+# =============================
+
+# --- Batch commands to run ---
+$batchContent = @"
+echo ==================================================
+echo Running batch commands from PowerShell
+echo Time: %DATE% %TIME%
+REM Add your actual batch commands below
+echo Hello from CMD!
+ping 127.0.0.1 -n 2
+echo ==================================================
+pause
+"@
+
+# Run loop exactly 10 times
+for ($i = 1; $i -le 10; $i++) {
+    Write-Host ">>> Run #$i of 10 starting at $(Get-Date)"
+
+    # Create temporary batch file
+    $tempBatch = "$env:TEMP\tempScript.bat"
+    $batchContent | Out-File -FilePath $tempBatch -Encoding ASCII
+
+    # Run batch file in CMD (visible window) and wait for it to finish
+    Start-Process "cmd.exe" -ArgumentList "/c `"$tempBatch`"" -Wait
+
+    # Delete the temporary batch file
+    Remove-Item $tempBatch -Force
+
+    # Wait 60 seconds before next run, except after last run
+    if ($i -lt 10) {
+        Write-Host ">>> Waiting 60 seconds before next run..."
+        Start-Sleep -Seconds 60
+    }
+}
+
+Write-Host ">>> Completed all 10 runs at $(Get-Date)"
