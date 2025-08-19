@@ -1,0 +1,135 @@
+@echo off
+REM ========================================================
+REM Windows 10/11 Logging and Installation Script with Network Check
+REM ========================================================
+
+REM ------------------------------
+REM Test network paths before proceeding
+REM ------------------------------
+set "NETWORK_PATHS=\\myserver-01\Share \\myserver-02\Share2"
+echo Testing network connectivity...
+set "ERRORFLAG=0"
+
+for %%P in (%NETWORK_PATHS%) do (
+    if not exist "%%P\" (
+        echo ERROR: Network path %%P is not available!
+        set "ERRORFLAG=1"
+    ) else (
+        echo Network path %%P is available.
+    )
+)
+
+REM If any path failed, stop the script
+if "%ERRORFLAG%"=="1" (
+    echo One or more network paths are unavailable. Exiting script.
+    pause
+    exit
+)
+
+echo All network paths are available. Continuing...
+echo.
+
+REM ------------------------------
+REM User prompt: In-Place Upgrade or New Device
+REM ------------------------------
+:ASKDEVICE
+echo.
+echo Is this an In-Place Upgrade or a New Device setup?
+echo 1. In-Place Upgrade
+echo 2. New Device
+set /p DEVICECHOICE=Enter 1 or 2: 
+
+REM Validate input
+if "%DEVICECHOICE%"=="1" (
+    set "DEVICETYPE=In-Place Upgrade"
+) else if "%DEVICECHOICE%"=="2" (
+    set "DEVICETYPE=New Device"
+) else (
+    echo Invalid choice. Please enter 1 or 2.
+    goto ASKDEVICE
+)
+
+echo You selected: %DEVICETYPE%
+echo.
+
+REM ------------------------------
+REM Set log folder based on device type
+REM ------------------------------
+if "%DEVICETYPE%"=="1" (
+    set "LOGFOLDER=D:\Logs\InPlaceUpgrade"
+) else (
+    set "LOGFOLDER=D:\Logs\NewDevice"
+)
+
+REM Create log folder if it doesn't exist
+if not exist "%LOGFOLDER%" mkdir "%LOGFOLDER%"
+
+REM Set hostname and log file path
+set "HOSTNAME=%COMPUTERNAME%"
+set "LOGFILE=%LOGFOLDER%\%HOSTNAME%.txt"
+
+REM ------------------------------
+REM Start logging
+REM ------------------------------
+echo Logging system info for %HOSTNAME% > "%LOGFILE%"
+echo Device type: %DEVICETYPE% >> "%LOGFILE%"
+echo. >> "%LOGFILE%"
+
+REM ------------------------------
+REM List mapped drives
+REM ------------------------------
+echo === Mapped Drives === >> "%LOGFILE%"
+for /f "tokens=2,3" %%A in ('net use ^| findstr /R "^[A-Z]:"') do (
+    echo Drive %%A mapped to %%B >> "%LOGFILE%"
+)
+echo. >> "%LOGFILE%"
+
+REM ------------------------------
+REM List installed applications (fast, registry-based)
+REM ------------------------------
+echo === Installed Applications (Classic/Win32) === >> "%LOGFILE%"
+
+REM 64-bit apps
+for /f "tokens=*" %%A in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v DisplayName 2^>nul') do (
+    for /f "tokens=2*" %%B in ("%%A") do echo %%C >> "%LOGFILE%"
+)
+
+REM 32-bit apps on 64-bit system
+for /f "tokens=*" %%A in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s /v DisplayName 2^>nul') do (
+    for /f "tokens=2*" %%B in ("%%A") do echo %%C >> "%LOGFILE%"
+)
+echo. >> "%LOGFILE%"
+
+REM ------------------------------
+REM List Microsoft Store Apps
+REM ------------------------------
+echo === Microsoft Store Apps === >> "%LOGFILE%"
+powershell -NoProfile -Command "Get-AppxPackage | Select Name, Version | Format-Table -AutoSize" >> "%LOGFILE%" 2>&1
+echo. >> "%LOGFILE%"
+
+REM ------------------------------
+REM Final message
+REM ------------------------------
+echo Log file created at "%LOGFILE%"
+echo.
+
+REM ------------------------------
+REM Conditional continuation
+REM ------------------------------
+if "%DEVICETYPE%"=="1" (
+    REM In-Place Upgrade: continue to Windows 11 installation
+    echo Continuing with Windows 11 installation...
+    
+    REM ===================================
+    REM ADD YOUR WINDOWS 11 INSTALLATION COMMANDS BELOW
+    REM Example:
+    REM start /wait D:\InstallSource\setup.exe /auto upgrade /quiet /noreboot
+    REM You can add multiple commands here as needed
+    REM ===================================
+
+) else (
+    REM New Device: just log file and message
+    echo Log file created, continue to setup new Surface 7 device
+    pause
+    exit
+)
