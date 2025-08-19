@@ -1,0 +1,15 @@
+$maxRuns = 10
+$count = 0
+
+while ($count -lt $maxRuns) {
+    Write-Output "Running script at $(Get-Date)"
+
+    # Place your actual commands here
+    # Example:
+    # C:\Path\To\YourScript.ps1
+
+    $count++
+    Start-Sleep -Seconds 60
+}
+
+Write-Output "Finished running $maxRuns times."
