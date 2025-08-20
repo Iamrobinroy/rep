@@ -58,3 +58,9 @@ $cmdContent | Out-File -FilePath $cmdPath -Encoding ASCII -Force
 Write-Output "Created batch file: $cmdPath"
 
 Write-Output "Pre-staging complete. Ready for in-place upgrade."
+
+
+
+
+
+setup.exe /auto upgrade /DynamicUpdate enable /UILang en-GB /SystemLocale en-GB /InputLocale en-GB /UserLocale en-GB
