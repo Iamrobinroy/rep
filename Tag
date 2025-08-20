@@ -1,0 +1,124 @@
+<#
+.SYNOPSIS
+  Updates Windows Autopilot Group Tag for the local device only.
+
+.DESCRIPTION
+  - Prompts for Intune admin login.
+  - Detects the local machine's serial number.
+  - Looks up that serial number in Autopilot records.
+  - Updates ONLY that device’s Group Tag.
+  - Logs all actions to a per-hostname file.
+  - Prompts for confirmation before making changes.
+  - Works on Windows 10 & 11.
+
+.NOTES
+  Author: Robin – Optimized turnkey version
+#>
+
+# ------------------------------
+# Configuration
+# ------------------------------
+$NewGroupTag = "Finance-Laptops"  # Desired Group Tag
+
+# Get hostname
+$Hostname = $env:COMPUTERNAME
+
+# Log file per hostname
+$LogFile = "C:\Windows\Setup\Scripts\AutopilotTagUpdate_$Hostname.log"
+
+# Ensure log folder exists
+$LogFolder = Split-Path $LogFile
+if (-not (Test-Path $LogFolder)) { New-Item -Path $LogFolder -ItemType Directory -Force }
+
+# Simple logging function
+function Log {
+    param([string]$Message)
+    $Time = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $Entry = "$Time - $Message"
+    Write-Host $Entry
+    $Entry | Out-File -FilePath $LogFile -Append -Encoding UTF8
+}
+
+Log "=== Starting Autopilot Group Tag Update ==="
+
+# ------------------------------
+# Ensure Microsoft Graph module
+# ------------------------------
+if (-not (Get-Module -ListAvailable -Name Microsoft.Graph)) {
+    Log "Microsoft.Graph module not found. Installing..."
+    try {
+        Install-Module Microsoft.Graph -Scope CurrentUser -Force -AllowClobber
+        Log "Microsoft.Graph module installed."
+    } catch {
+        Log "❌ Failed to install Microsoft.Graph: $($_.Exception.Message)"
+        exit 1
+    }
+} else {
+    Log "Microsoft.Graph module already installed."
+}
+
+Import-Module Microsoft.Graph
+
+# ------------------------------
+# Connect to Graph
+# ------------------------------
+try {
+    Log "Prompting for Intune admin login..."
+    Connect-MgGraph -Scopes "DeviceManagementServiceConfig.ReadWrite.All","Device.ReadWrite.All"
+    Select-MgProfile -Name beta
+    Log "Connected to Microsoft Graph."
+} catch {
+    Log "❌ Graph login failed: $($_.Exception.Message)"
+    exit 1
+}
+
+# ------------------------------
+# Get local device serial number
+# ------------------------------
+try {
+    $Serial = (Get-CimInstance Win32_BIOS).SerialNumber.Trim()
+    Log "Detected Serial Number: $Serial"
+} catch {
+    Log "❌ Failed to read BIOS serial number: $($_.Exception.Message)"
+    exit 1
+}
+
+# ------------------------------
+# Query Autopilot device
+# ------------------------------
+try {
+    $Device = Get-MgDeviceManagementWindowsAutopilotDeviceIdentity -Filter "serialNumber eq '$Serial'"
+    if ($null -eq $Device) {
+        Log "❌ No Autopilot record found for serial number: $Serial"
+        exit 0
+    }
+    Log "✅ Found Autopilot record for: $Serial (Current Group Tag: $($Device.GroupTag))"
+} catch {
+    Log "❌ Failed to query Autopilot device: $($_.Exception.Message)"
+    exit 1
+}
+
+# ------------------------------
+# Confirm update
+# ------------------------------
+$confirm = Read-Host "Do you want to update the Group Tag to '$NewGroupTag' for this device? (Y/N)"
+if ($confirm -notin @("Y","y")) {
+    Log "❌ Update canceled by user."
+    exit 0
+}
+
+# ------------------------------
+# Update Group Tag
+# ------------------------------
+try {
+    Update-MgDeviceManagementWindowsAutopilotDeviceIdentity `
+        -WindowsAutopilotDeviceIdentityId $Device.Id `
+        -GroupTag $NewGroupTag
+
+    Log "🎯 Group Tag successfully updated to: $NewGroupTag"
+} catch {
+    Log "❌ Failed to update Group Tag: $($_.Exception.Message)"
+    exit 1
+}
+
+Log "=== Autopilot Group Tag Update Completed ==="
