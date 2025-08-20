@@ -1,5 +1,0 @@
-echo === Mapped Drives === >> "%LOGFILE%"
-for /f "tokens=1,2,*" %%A in ('net use ^| findstr "^[A-Z]:"') do (
-    echo Drive %%A -> %%C >> "%LOGFILE%"
-)
-echo. >> "%LOGFILE%"
