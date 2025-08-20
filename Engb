@@ -1,0 +1,60 @@
+# Define folder
+$ScriptsFolder = "C:\Windows\Setup\Scripts"
+
+# Create folder if it doesn't exist
+if (-not (Test-Path $ScriptsFolder)) {
+    New-Item -ItemType Directory -Path $ScriptsFolder -Force
+    Write-Output "Created folder: $ScriptsFolder"
+}
+
+# --- Set-UK-Lang.ps1 content ---
+$ps1Content = @"
+# ================================
+# Set English (UK) with Ireland as country
+# ================================
+
+# Check if en-GB language pack is installed
+\$langs = Get-WinUserLanguageList
+if (-not (\$langs.LanguageTag -contains "en-GB")) {
+    Write-Output "Installing English (UK) language pack..."
+
+    Add-WindowsCapability -Online -Name Language.Basic~~~en-GB~0.0.1.0 -ErrorAction Stop
+    Add-WindowsCapability -Online -Name Language.Handwriting~~~en-GB~0.0.1.0 -ErrorAction SilentlyContinue
+    Add-WindowsCapability -Online -Name Language.OCR~~~en-GB~0.0.1.0 -ErrorAction SilentlyContinue
+    Add-WindowsCapability -Online -Name Language.Speech~~~en-GB~0.0.1.0 -ErrorAction SilentlyContinue
+    Add-WindowsCapability -Online -Name Language.TextToSpeech~~~en-GB~0.0.1.0 -ErrorAction SilentlyContinue
+
+    Write-Output "English (UK) language pack installed."
+}
+
+# Set UI language, user language list, and keyboard
+Set-WinSystemLocale en-GB
+Set-WinUILanguageOverride en-GB
+Set-WinUserLanguageList -LanguageList en-GB -Force
+Set-Culture en-GB
+
+# Set country/region to Ireland
+Set-WinHomeLocation -GeoId 93
+
+Write-Output "System language and region set: English (UK), Ireland."
+"@
+
+# Write the PowerShell script
+$ps1Path = Join-Path $ScriptsFolder "Set-UK-Lang.ps1"
+$ps1Content | Out-File -FilePath $ps1Path -Encoding UTF8 -Force
+Write-Output "Created PowerShell script: $ps1Path"
+
+# --- SetupComplete.cmd content ---
+$cmdContent = @"
+@echo off
+:: Run language and region setup
+powershell.exe -ExecutionPolicy Bypass -File "%WINDIR%\Setup\Scripts\Set-UK-Lang.ps1"
+exit /b 0
+"@
+
+# Write the batch file
+$cmdPath = Join-Path $ScriptsFolder "SetupComplete.cmd"
+$cmdContent | Out-File -FilePath $cmdPath -Encoding ASCII -Force
+Write-Output "Created batch file: $cmdPath"
+
+Write-Output "Pre-staging complete. Ready for in-place upgrade."
