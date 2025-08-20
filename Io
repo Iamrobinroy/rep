@@ -1,7 +1,0 @@
-echo === Mapped Drives === >> "%LOGFILE%"
-for /f "skip=2 tokens=2,3*" %%A in ('net use') do (
-    if not "%%A"=="" if not "%%B"=="" (
-        echo Drive %%A -> %%B >> "%LOGFILE%"
-    )
-)
-echo. >> "%LOGFILE%"
