@@ -1,8 +1,0 @@
-@echo off
-rem Get device serial number and store in variable
-for /f "tokens=2 delims==" %%i in ('wmic bios get serialnumber /value') do set "Serial=%%i"
-
-rem Display the result
-echo Device Serial Number: %Serial%
-
-pause
